@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kabinen-Booking (6 Kabinen, wochenweise)</title>
+  <style>
+    :root{
+      --bg:#ffffff; --fg:#111827; --muted:#6b7280; --border:#e5e7eb;
+      --emerald:#10b981; --rose:#ef4444; --amber:#f59e0b;
+      --emerald-bg:#d1fae5; --rose-bg:#fee2e2; --amber-bg:#fef3c7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0b0f19; --fg:#e5e7eb; --muted:#9ca3af; --border:#1f2937;
+              --emerald-bg:#064e3b; --rose-bg:#3f0d0d; --amber-bg:#3b2f0a; }
+      body { background: #0b0f19; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: var(--fg); background: var(--bg); }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 1.6rem; margin: 0 0 12px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+    .card { border: 1px solid var(--border); border-radius: 16px; padding: 12px 12px 16px; background: rgba(255,255,255,0.02); }
+    .card h2 { font-size: 1.1rem; margin: 8px 0 8px; }
+    label { display:block; font-size:.9rem; color: var(--muted); margin-bottom: 4px; }
+    input[type="date"], input[type="text"], select { width: 100%; padding: 8px 10px; border:1px solid var(--border); border-radius: 10px; background: transparent; color: var(--fg); }
+    .row { display:flex; gap:8px; align-items:center; }
+    .btn { padding: 8px 10px; border-radius: 10px; border:1px solid var(--border); background: transparent; color: var(--fg); cursor: pointer; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn.primary { border-color: #cbd5e1; }
+    .btn.danger { border-color:#7f1d1d; }
+    .legend-dot { display:inline-block; width:10px; height:10px; border-radius:999px; margin-right:6px; vertical-align:middle; }
+    .emerald { background: var(--emerald); }
+    .rose { background: var(--rose); }
+    .amber { background: var(--amber); }
+    .muted { background: var(--border); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    thead th { position: sticky; top: 0; background: var(--bg); z-index: 2; }
+    th, td { border-top: 1px solid var(--border); padding: 6px; text-align: center; }
+    th:first-child, td:first-child { text-align:left; position: sticky; left: 0; background: var(--bg); z-index:1; }
+    .scroll { overflow:auto; border:1px solid var(--border); border-radius: 16px; }
+    .cell { min-width: 7rem; width:100%; padding:8px; border:1px solid var(--border); border-radius:12px; font-size:.9rem; }
+    .frei { background: var(--emerald-bg); }
+    .gebucht { background: var(--rose-bg); }
+    .option { background: var(--amber-bg); }
+    .toolbar { display:flex; gap:8px; flex-wrap: wrap; }
+    .small { font-size:.8rem; color: var(--muted); }
+    .caps { font-variant: all-small-caps; letter-spacing: .04em; font-weight: 600; }
+    .status-btn { padding:4px 8px; border:1px solid var(--border); border-radius: 8px; font-size:.75rem; background: transparent; cursor:pointer; }
+    .sticky-controls { display:flex; gap:4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Expeditionsschiff – Kabinenbelegung (wochenweise)</h1>
+
+  <div class="grid">
+    <div class="card" style="grid-column: span 2;">
+      <h2>Einstellungen</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <div style="flex:1">
+          <label>Start (Montag)</label>
+          <input id="startDate" type="date">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn" id="btnToday">Heute</button>
+        </div>
+        <div>
+          <label>Anzahl Wochen</label>
+          <select id="weeks">
+            <option>26</option>
+            <option selected>52</option>
+            <option>60</option>
+          </select>
+        </div>
+      </div>
+      <label>Kabinenbezeichnungen (6)</label>
+      <div class="row" style="flex-wrap:wrap">
+        <input type="text" class="cabinName" value="Kabine 1" style="flex:1; min-width:160px">
+        <input type="text" class="cabinName" value="Kabine 2" style="flex:1; min-width:160px">
+        <input type="text" class="cabinName" value="Kabine 3" style="flex:1; min-width:160px">
+        <input type="text" class="cabinName" value="Kabine 4" style="flex:1; min-width:160px">
+        <input type="text" class="cabinName" value="Kabine 5" style="flex:1; min-width:160px">
+        <input type="text" class="cabinName" value="Kabine 6" style="flex:1; min-width:160px">
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn primary" id="btnExport">Export</button>
+        <input type="file" id="fileImport" accept="application/json" style="display:none">
+        <button class="btn" id="btnImport">Import</button>
+        <button class="btn danger" id="btnReset">Plan leeren</button>
+        <button class="btn" onclick="window.print()">Drucken</button>
+        <span class="small">Speichert lokal im Browser.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Legende</h2>
+      <div><span class="legend-dot emerald"></span>Frei</div>
+      <div><span class="legend-dot rose"></span>Gebucht</div>
+      <div><span class="legend-dot amber"></span>Option</div>
+      <div><span class="legend-dot muted"></span>Leer / nicht gesetzt</div>
+    </div>
+
+    <div class="card">
+      <h2>Auslastung</h2>
+      <div>Gesamtzellen: <b id="totalCells">0</b></div>
+      <div class="row" style="justify-content:space-between"><span>Frei</span> <span id="freePct">0 (0%)</span></div>
+      <div class="row" style="justify-content:space-between"><span>Gebucht</span> <span id="bookedPct">0 (0%)</span></div>
+      <div class="row" style="justify-content:space-between"><span>Option</span> <span id="optionPct">0 (0%)</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Plan (wochenweise)</h2>
+    <div class="scroll">
+      <table id="plan">
+        <thead><tr id="theadRow"><th>Kabine</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="small" style="margin-top:10px">Tipp: Auf eine Zelle klicken wechselt den Status: Leer → Frei → Gebucht → Option → Leer. Über die kleinen Buttons im Wochenkopf bzw. neben der Kabine lassen sich ganze Spalten/Zeilen setzen.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY='booking_6cabins_weekly_v1_vanilla';
+  const $ = (sel, parent=document)=>parent.querySelector(sel);
+  const $$ = (sel, parent=document)=>Array.from(parent.querySelectorAll(sel));
+
+  function startOfISOWeek(d){
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = (date.getDay() + 6) % 7; // Monday=0
+    date.setDate(date.getDate() - day);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  function addWeeks(d, w){ return addDays(d, w*7); }
+  function fmt(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+  function parse(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
+  function isoWeek(d){
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate()+4-day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const week = Math.ceil(((date-yearStart)/86400000 + 1)/7);
+    return {week, year: date.getUTCFullYear()};
+  }
+
+  const state = load() || defaultState();
+  const startInput = $('#startDate');
+  const weeksInput = $('#weeks');
+  const theadRow = $('#theadRow');
+  const tbody = $('#tbody');
+
+  function defaultState(){
+    const s = startOfISOWeek(new Date());
+    return {
+      startDate: fmt(s),
+      weeks: 52,
+      cabins: ['Kabine 1','Kabine 2','Kabine 3','Kabine 4','Kabine 5','Kabine 6'],
+      states: {} // key "c-w" -> frei|gebucht|option|''
+    };
+  }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function load(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e){ return null; } }
+
+  function rebuild(){
+    // header
+    theadRow.innerHTML = '<th>Kabine</th>';
+    const start = parse(state.startDate);
+    const weeks = Number(state.weeks);
+    const ranges = Array.from({length: weeks}, (_,i)=>{
+      const from = addWeeks(start, i);
+      const to = addDays(from, 6);
+      const {week, year} = isoWeek(from);
+      return { i, from, to, label:`KW ${String(week).padStart(2,'0')} / ${year}` };
+    });
+    ranges.forEach(w=>{
+      const th = document.createElement('th');
+      th.innerHTML = `<div style="font-weight:600">${w.label}</div>
+        <div class="small">${fmt(w.from)} – ${fmt(w.to)}</div>
+        <div class="sticky-controls">
+          <button class="status-btn" data-week="${w.i}" data-val="frei">frei</button>
+          <button class="status-btn" data-week="${w.i}" data-val="gebucht">gebucht</button>
+          <button class="status-btn" data-week="${w.i}" data-val="option">option</button>
+        </div>`;
+      theadRow.appendChild(th);
+    });
+
+    // body
+    tbody.innerHTML = '';
+    state.cabins.forEach((name, ci)=>{
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.innerHTML = `<div class="row" style="justify-content:space-between; gap:6px;">
+        <span><input type="text" value="${name}" data-cabin="${ci}" class="cabinInline" style="width:160px; border:1px solid var(--border); border-radius:8px; padding:4px 6px; background: transparent; color: var(--fg)"></span>
+        <span class="sticky-controls">
+          <button class="status-btn" data-cabin="${ci}" data-val="frei">frei</button>
+          <button class="status-btn" data-cabin="${ci}" data-val="gebucht">gebucht</button>
+          <button class="status-btn" data-cabin="${ci}" data-val="option">option</button>
+        </span>
+      </div>`;
+      tr.appendChild(td);
+
+      ranges.forEach(w=>{
+        const td = document.createElement('td');
+        const key = `${ci}-${w.i}`;
+        const val = state.states[key] || '';
+        const cls = val ? ` ${val}` : '';
+        td.innerHTML = `<button class="cell${cls}" data-key="${key}">${val ? (val[0].toUpperCase()+val.slice(1)) : '—'}</button>`;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    updateStats();
+  }
+
+  function cycle(val){
+    const order = ['', 'frei', 'gebucht', 'option'];
+    const idx = order.indexOf(val);
+    return order[(idx+1)%order.length];
+  }
+
+  function updateStats(){
+    const total = state.cabins.length * Number(state.weeks);
+    let free=0, booked=0, option=0;
+    Object.values(state.states).forEach(v=>{
+      if (v==='frei') free++;
+      else if (v==='gebucht') booked++;
+      else if (v==='option') option++;
+    });
+    $('#totalCells').textContent = String(total);
+    function pct(n){ return Math.round(n/total*100)||0; }
+    $('#freePct').textContent = `${free} (${pct(free)}%)`;
+    $('#bookedPct').textContent = `${booked} (${pct(booked)}%)`;
+    $('#optionPct').textContent = `${option} (${pct(option)}%)`;
+  }
+
+  // Init inputs
+  startInput.value = state.startDate;
+  weeksInput.value = String(state.weeks);
+  $$('.cabinName').forEach((el,i)=>{
+    el.value = state.cabins[i] || `Kabine ${i+1}`;
+    el.addEventListener('input', e=>{
+      state.cabins[i] = e.target.value || `Kabine ${i+1}`;
+      save(); rebuild();
+    });
+  });
+
+  $('#btnToday').addEventListener('click', ()=>{
+    const s = startOfISOWeek(new Date());
+    state.startDate = fmt(s);
+    startInput.value = state.startDate;
+    save(); rebuild();
+  });
+  startInput.addEventListener('change', e=>{
+    state.startDate = e.target.value || state.startDate;
+    save(); rebuild();
+  });
+  weeksInput.addEventListener('change', e=>{
+    state.weeks = Number(e.target.value)||52;
+    save(); rebuild();
+  });
+
+  // table interactions
+  $('#plan').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    // Per cell cycle
+    if (btn.classList.contains('cell')){
+      const key = btn.getAttribute('data-key');
+      const next = cycle(state.states[key] || '');
+      state.states[key] = next || undefined;
+      if (!next) delete state.states[key];
+      save(); rebuild();
+    }
+    // Set whole week
+    if (btn.classList.contains('status-btn') && btn.hasAttribute('data-week')){
+      const week = Number(btn.getAttribute('data-week'));
+      const val = btn.getAttribute('data-val');
+      for (let c=0;c<state.cabins.length;c++){ state.states[`${c}-${week}`] = val; }
+      save(); rebuild();
+    }
+    // Set whole cabin
+    if (btn.classList.contains('status-btn') && btn.hasAttribute('data-cabin')){
+      const ci = Number(btn.getAttribute('data-cabin'));
+      const weeks = Number(state.weeks);
+      const val = btn.getAttribute('data-val');
+      for (let w=0;w<weeks;w++){ state.states[`${ci}-${w}`] = val; }
+      save(); rebuild();
+    }
+  });
+
+  // inline cabin name edits inside table
+  $('#plan').addEventListener('input', (e)=>{
+    if (e.target.classList.contains('cabinInline')){
+      const idx = Number(e.target.getAttribute('data-cabin'));
+      state.cabins[idx] = e.target.value || `Kabine ${idx+1}`;
+      save();
+    }
+  });
+
+  // Export / Import / Reset
+  $('#btnExport').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `kabinen-plan_${state.startDate}_w${state.weeks}.json`; a.click();
+    URL.revokeObjectURL(url);
+  });
+  $('#btnImport').addEventListener('click', ()=>$('#fileImport').click());
+  $('#fileImport').addEventListener('change', (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        Object.assign(state, data);
+        save(); rebuild();
+      }catch(err){ alert('Ungültige Datei.'); }
+    };
+    reader.readAsText(file);
+  });
+  $('#btnReset').addEventListener('click', ()=>{
+    if (confirm('Plan wirklich leeren?')){
+      state.states = {};
+      save(); rebuild();
+    }
+  });
+
+  // first render
+  rebuild();
+})();
+</script>
+</body>
+</html>
